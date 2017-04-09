@@ -230,22 +230,24 @@ BEGIN
   
   -- BUILD THE QUERY TO SELECT ALL RECORDS THAT CONTAIN THE FIELD(S) TO SEARCH
   str_recselect := 
-      'SELECT 
-         RF.RECNAME
-       , RF.FIELDNAME
-       , RD.SQLTABLENAME
-       , F.FIELDTYPE
-       FROM SYSADM.PSRECFIELDDB RF, SYSADM.PSRECDEFN RD, SYSADM.PSDBFIELD F
-       WHERE RF.FIELDNAME LIKE UPPER(:fieldnamein)
-       AND RD.RECNAME = RF.RECNAME
-       AND RD.RECTYPE = 0  -- ONLY CHECK SQL TABLES
-       AND RF.FIELDNAME = F.FIELDNAME
-       AND F.FIELDTYPE LIKE :fieldtypein
-       AND F.FIELDTYPE <> 8  -- exclue IMAGE fields which are binary BLOB
-       AND (((F.LENGTH + F.DECIMALPOS + 2) >= length(:fieldvaluein)) 
-            OR (F.LENGTH = 0))
-       AND RD.RECNAME NOT IN (''HR_ACCTG_LINE'',''VCHR_ACCTG_LINE'')  -- *** exclude certain records as required ***
-       ORDER BY RF.RECNAME, RF.FIELDNAME';    
+      ' ';
+      -- below code is from Peoplesoft-specific version, rewrite with Oracle catalog tables
+      --'SELECT 
+      --   RF.RECNAME
+      -- , RF.FIELDNAME
+      -- , RD.SQLTABLENAME
+      -- , F.FIELDTYPE
+      -- FROM SYSADM.PSRECFIELDDB RF, SYSADM.PSRECDEFN RD, SYSADM.PSDBFIELD F
+      -- WHERE RF.FIELDNAME LIKE UPPER(:fieldnamein)
+      -- AND RD.RECNAME = RF.RECNAME
+      -- AND RD.RECTYPE = 0  -- ONLY CHECK SQL TABLES
+      -- AND RF.FIELDNAME = F.FIELDNAME
+      -- AND F.FIELDTYPE LIKE :fieldtypein
+      -- AND F.FIELDTYPE <> 8  -- exclue IMAGE fields which are binary BLOB
+      -- AND (((F.LENGTH + F.DECIMALPOS + 2) >= length(:fieldvaluein)) 
+      --      OR (F.LENGTH = 0))
+      -- AND RD.RECNAME NOT IN (''HR_ACCTG_LINE'',''VCHR_ACCTG_LINE'')  -- *** exclude certain records as required ***
+      -- ORDER BY RF.RECNAME, RF.FIELDNAME';    
 
   OPEN c_recselect FOR str_recselect USING fieldnamein, fieldtypein, fieldvaluein;   
   LOOP
