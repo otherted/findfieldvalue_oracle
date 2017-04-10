@@ -25,9 +25,9 @@ SQL Developer:
  - Field Type:
      It is recommended to supply a value to avoid data type errors.
      Leave blank to search all supported types.
-       0 = Character (CHAR, VARCHAR, VARCHAR2, NCHAR, NVARCHAR2)
-       1 = Long Character  (LONG)
-       2 = Number  (NUMBER, FLOAT)
+     - 0 = Character (CHAR, VARCHAR, VARCHAR2, NCHAR, NVARCHAR2)
+     - 1 = Long Character  (LONG)
+     - 2 = Number  (NUMBER, FLOAT)
   
  - Field Value: Value to search for, can use % wildcard 
 
