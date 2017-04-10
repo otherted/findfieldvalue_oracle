@@ -23,11 +23,11 @@ SQL Developer:
  - Field Name: Provide a field name or use wildcards
 
  - Field Type:
-   It is recommended to supply a value to avoid data type errors.
-   Leave blank to search all supported types.
-     0 = Character (CHAR, VARCHAR, VARCHAR2, NCHAR, NVARCHAR2)
-     1 = Long Character  (LONG)
-     2 = Number  (NUMBER, FLOAT)
+     It is recommended to supply a value to avoid data type errors.
+     Leave blank to search all supported types.
+       0 = Character (CHAR, VARCHAR, VARCHAR2, NCHAR, NVARCHAR2)
+       1 = Long Character  (LONG)
+       2 = Number  (NUMBER, FLOAT)
   
  - Field Value: Value to search for, can use % wildcard 
 
@@ -38,8 +38,8 @@ SQL Developer:
             default to only summary output.
     - No - Only count the instances of the search value that are found
 
-  The option to return each distinct variation of the search value found in the tables is done using a GROUP BY clause and provides much more detailed data, but the program will run much slower. Use with caution for large searches.
+   The option to return each distinct variation of the search value found in the tables is done using a GROUP BY clause and provides much more detailed data, but the program will run much slower. Use with caution for large searches.
   
 ## Output:
-File is created listing the table and field where value was found.
-Output file is located under C:\Temp\.
+  File is created listing the table and field where value was found.
+  Output file is located under C:\Temp\.
