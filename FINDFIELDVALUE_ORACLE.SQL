@@ -13,15 +13,9 @@
 /*    Field Type:                                                            */
 /*        Select a type or leave blank to search all types                   */
 /*        Although recommended to supply value to avoid data type error      */
-/*        0 = Character                                                      */
-/*        1 = Long Character                                                 */
-/*        2 = Number                                                         */
-/*        3 = Signed Number                                                  */
-/*        4 = Date                                                           */
-/*        5 = Time                                                           */
-/*        6 = DateTimep                                                      */
-/*        8 = Image (uses raw BLOB, search not supported)                    */
-/*        9 = Image Reference (name of image object, varchar2(30))           */
+/*        0 = Character  (CHAR,VARCHAR,VARCHAR2,NCHAR,NVARCHAR2)             */
+/*        1 = Long Character  (LONG)                                         */
+/*        2 = Number (NUMBER,FLOAT)                                          */
 /*    Field Value:                                                           */
 /*        Value to search for, can use % wildcard                            */
 /*    Return Detail Values: Yes (Y) or No (N)                                */
@@ -72,7 +66,7 @@ PROMPT '------------------------------------------------------------------------
 PROMPT ' ENTER SEARCH VALUES INTO THE FOLLOWING PROMPTS.                               '
 PROMPT ' ORACLE WILDCARDS ARE ACCEPTED AND WILL BE SUBSTITUTED IF VALUES NOT PROVIDED. '
 PROMPT ' VALID VALUES FOR FIELD TYPE INCLUDE:                                          '
-PROMPT '    0 = CHARACTER, 1 = LONG, 2 = NUMBER, 3 = SIGNED NUMBER, OR LEAVE BLANK     '
+PROMPT '    0 = CHARACTER, 1 = LONG, 2 = NUMBER, OR LEAVE BLANK                        '
 PROMPT '-------------------------------------------------------------------------------'
 PROMPT
 ACCEPT i_tabownerin    CHAR    PROMPT "Enter Schema or Owner:  "
@@ -94,12 +88,12 @@ c_dbname        varchar2(8);
 n_recproc       integer;
 n_recfound      integer;
 
-o_realtabowner VARCHAR2(50);  
+o_realtabowner  VARCHAR2(50);  
 
 o_realrecname   varchar2(50);
 o_realfldname   varchar2(50);
 o_sqltablename  varchar2(50);
-o_fieldtype     integer;
+o_fieldtype     varchar2(20);
 o_realvalue     long;   -- if searching long fields need a larger variable
 o_rowcount      integer;
 
@@ -111,6 +105,10 @@ detailyesnoin   varchar(1);
 
 str_recselect   VARCHAR2(1000);
 str_dtlqry      VARCHAR2(500);
+str_datatypecls VARCHAR2(250);
+str_exclclause  VARCHAR2(500);
+
+str_fieldtypes  VARCHAR(250);
 
 err_num         NUMBER;
 err_msg         VARCHAR2(256); 
@@ -198,9 +196,6 @@ BEGIN
   IF fieldnamein IS NULL THEN
     fieldnamein := '%';
   END IF;
-  IF fieldtypein = '999' THEN
-    fieldtypein := '%';
-  END IF;
   IF fieldvaluein IS NULL THEN
     fieldvaluein := '%';
   END IF;
@@ -208,14 +203,35 @@ BEGIN
     detailyesnoin := 'N';
   END IF;
   
+  CASE  
+    WHEN fieldtypein = '0' THEN
+       str_fieldtypes := '''CHAR'',''VARCHAR'',''VARCHAR2'',''NCHAR'',''NVARCHAR2''';
+       str_datatypecls := 'AND C.DATA_TYPE IN ( ' || str_fieldtypes || ') ';
+    WHEN fieldtypein = '1' THEN
+       str_fieldtypes := '''LONG''';
+       str_datatypecls := 'AND C.DATA_TYPE = ' || str_fieldtypes || ' ';
+    WHEN fieldtypein = '2' THEN
+       str_fieldtypes := '''FLOAT'',''NUMBER''';
+       str_datatypecls := 'AND C.DATA_TYPE IN ( ' || str_fieldtypes || ') ';
+    WHEN fieldtypein = '999' THEN
+       str_fieldtypes := '''CHAR'',''VARCHAR'',''VARCHAR2'',''NCHAR'',''NVARCHAR2'',''LONG'',''FLOAT'',''NUMBER''';
+       str_datatypecls := 'AND C.DATA_TYPE IN ( ' || str_fieldtypes || ') ';
+    ELSE
+       str_fieldtypes := ' ';
+       str_datatypecls := ' ';
+  END CASE;
+  
+  -- add additional clause here as required, for example to exclude some records from the search
+  str_exclclause := ' ';  
+  
   -- output search parameterss
   dbms_output.put_line('Schema Name Search = ' || tabownerin);
   dbms_output.put_line('Field Name Search = ' || fieldnamein);
-  dbms_output.put_line('Field Type Search = ' || fieldtypein);
+  dbms_output.put_line('Field Type Search = ' || str_fieldtypes);
   dbms_output.put_line('Field Value Search = ' || fieldvaluein);
   dbms_output.put_line('Output Detail Values = ' || detailyesnoin);
   -- the detail processing procedures cannot handle long colums due to group by, issue warning
-  IF detailyesnoin = 'Y' AND (fieldtypein = '1' OR fieldtypein = '%') THEN
+  IF detailyesnoin = 'Y' AND (fieldtypein = '1' OR fieldtypein = '999') THEN
     dbms_output.put_line(chr(255)||chr(255)||chr(255)||'WARNING: Detail output not available for tables with LONG columns...');
     dbms_output.put_line(chr(255)||chr(255)||chr(255)||'         Only summary counts will be provided for those records.    ');
   END IF;
@@ -230,33 +246,28 @@ BEGIN
   
   -- BUILD THE QUERY TO SELECT ALL RECORDS THAT CONTAIN THE FIELD(S) TO SEARCH
   str_recselect := 
-      ' ';
-      -- below code is from Peoplesoft-specific version, rewrite with Oracle catalog tables
-      --'SELECT 
-      --   RF.RECNAME
-      -- , RF.FIELDNAME
-      -- , RD.SQLTABLENAME
-      -- , F.FIELDTYPE
-      -- FROM SYSADM.PSRECFIELDDB RF, SYSADM.PSRECDEFN RD, SYSADM.PSDBFIELD F
-      -- WHERE RF.FIELDNAME LIKE UPPER(:fieldnamein)
-      -- AND RD.RECNAME = RF.RECNAME
-      -- AND RD.RECTYPE = 0  -- ONLY CHECK SQL TABLES
-      -- AND RF.FIELDNAME = F.FIELDNAME
-      -- AND F.FIELDTYPE LIKE :fieldtypein
-      -- AND F.FIELDTYPE <> 8  -- exclue IMAGE fields which are binary BLOB
-      -- AND (((F.LENGTH + F.DECIMALPOS + 2) >= length(:fieldvaluein)) 
-      --      OR (F.LENGTH = 0))
-      -- AND RD.RECNAME NOT IN (''HR_ACCTG_LINE'',''VCHR_ACCTG_LINE'')  -- *** exclude certain records as required ***
-      -- ORDER BY RF.RECNAME, RF.FIELDNAME';    
+      'SELECT 
+       C.OWNER
+       ,C.TABLE_NAME
+       ,C.COLUMN_NAME
+       ,C.DATA_TYPE
+       FROM ALL_TABLES T, ALL_TAB_COLUMNS C
+       WHERE UPPER(T.OWNER) LIKE UPPER(:tabownerin)
+       AND UPPER(C.COLUMN_NAME) LIKE UPPER(:fieldnamein)
+       AND C.TABLE_NAME = T.TABLE_NAME
+       AND C.OWNER = T.OWNER '
+       || str_datatypecls || 
+       ' AND (((C.DATA_LENGTH + NVL(DATA_SCALE,0) + 2) >= LENGTH(:fieldvaluein)) or (C.DATA_LENGTH = 0)) '
+       || str_exclclause || 
+       ' ORDER BY T.TABLE_NAME, C.COLUMN_NAME ';
 
-  OPEN c_recselect FOR str_recselect USING fieldnamein, fieldtypein, fieldvaluein;   
+  OPEN c_recselect FOR str_recselect USING tabownerin, fieldnamein, fieldvaluein;   
   LOOP
-    FETCH c_recselect INTO  o_realrecname, o_realfldname, o_sqltablename, o_fieldtype; 
+    FETCH c_recselect INTO  o_realtabowner, o_realrecname, o_realfldname, o_fieldtype; 
     EXIT WHEN c_recselect%NOTFOUND;
     n_recproc := n_recproc + 1;
     
-    
-    IF detailyesnoin = 'N' OR o_fieldtype = 1 THEN
+    IF detailyesnoin = 'N' OR o_fieldtype = 'LONG' THEN
       -- do summary processing if selected, or if this is a LONG column do summary because group by will cause detail process to fail
       select_rec_summary;
     ELSE
