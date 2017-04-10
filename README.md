@@ -1,9 +1,10 @@
 # findfieldvalue_oracle
-PL/SQL script to find a value in an Oracle database by searching tables and columns
+PL/SQL script to find a value in an Oracle database by searching tables and columns.
 
 
-This script works for ORACLE environments.  
-There is also an SQR version, but the functionality is more limited.    
+### Limitations:
+- Only certain data types can be searched.  See the list below.
+ 
 
 ## Running the Script:
 
