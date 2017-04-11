@@ -1,6 +1,5 @@
 /* ***************************************************************************/
 /* FINDFIELDVALUE_ORACLE.SQL                                                 */
-/* Date: 04/06/2017                                                          */
 /* Developer: Ted Lewis                                                      */
 /* ------------------------------------------------------------------------- */
 /* Description: Find tables that contain a specific field and value.         */
@@ -55,7 +54,7 @@ PROMPT
 -- SETUP THE SPOOL FILE WHEN RUN THROUGH SQLPlus
 SET TERMOUT OFF
 col spoolname new_value spoolname;
-select 'FINDFIELDVALUE_ORACLE_' || A.NAME || '_' || to_char(sysdate, 'yyyymmddhh24miss') || '.TXT' spoolname from v$database A; 
+select 'FINDFIELDVALUE_ORACLE_' || sys_context('userenv','instance_name') || '_' || to_char(sysdate, 'yyyymmddhh24miss') || '.TXT' spoolname from dual A; 
 SPOOL C:\TEMP\&spoolname
 SET TERMOUT ON
 PROMPT 'Creating Output File: &spoolname';
@@ -169,7 +168,7 @@ END;
 
 /* ********** BEGIN MAIN PROGRAM ********** */
 BEGIN
-  SELECT name into c_dbname FROM V$DATABASE;
+  SELECT sys_context('userenv','instance_name') into c_dbname FROM DUAL;
   
   dbms_output.put_line('FINDFIELDVALUE_ORACLE.SQL');
   dbms_output.put_line(chr(10));
